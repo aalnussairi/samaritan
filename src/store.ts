@@ -135,11 +135,11 @@ export class Store {
       sql = `
         SELECT id, title, tags, snippet(issues_fts, 1, '<b>', '</b>', '...', 32) as snippet
         FROM issues_fts
-        WHERE issues_fts MATCH ? AND tags LIKE ?
+        WHERE issues_fts MATCH ? AND EXISTS (SELECT 1 FROM json_each(tags) WHERE value = ?)
         ORDER BY rank
         LIMIT ?
       `;
-      params = [query, `%"${options.tag}"%`, limit];
+      params = [query, options.tag, limit];
     } else {
       sql = `
         SELECT id, title, tags, snippet(issues_fts, 1, '<b>', '</b>', '...', 32) as snippet
@@ -172,10 +172,10 @@ export class Store {
     const rows = this.db.prepare(`
       SELECT id, title, tags, '' as snippet
       FROM issues_fts
-      WHERE tags LIKE ?
+      WHERE EXISTS (SELECT 1 FROM json_each(tags) WHERE value = ?)
       ORDER BY created DESC
       LIMIT ?
-    `).all(`%"${tag}"%`, limit) as Array<{
+    `).all(tag, limit) as Array<{
       id: string;
       title: string;
       tags: string;

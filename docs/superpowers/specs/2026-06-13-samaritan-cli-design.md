@@ -54,18 +54,18 @@ The FTS5 index is derived from `issues.jsonl`. To detect when the source has cha
 - If they differ, the FTS5 index is rebuilt from scratch before the command proceeds.
 - The index is a cache — the JSONL is authoritative.
 
-### Merge Conflicts
 
+### Merge Conflicts
 JSONL is line-per-issue, so independent additions merge cleanly in git. Conflicts only arise when two agents modify the same line.
 
-- When a git merge produces conflict markers in `issues.jsonl`, those lines are unparseable JSON.
-- On next command, samaritan detects unparseable lines, skips them from the FTS5 index, and reports the line numbers to stderr.
-- The user resolves the conflict normally with git. Once the file is clean, the next command auto-rebuilds the index.
-- samaritan does not attempt automatic conflict resolution.
+- When a git merge produces conflict markers in `issues.jsonl`, samaritan auto-resolves them on the next command by accepting both sides of the conflict.
+- Both changes are kept as separate lines (since each valid side is a complete JSON record). Conflict markers and any non-JSON lines are discarded.
+- After resolving, samaritan rewrites `issues.jsonl` with the merged result and rebuilds the FTS5 index.
+- This means samaritan never requires manual conflict resolution — agents can run any command after a merge and the store will be consistent.
 
 ## Commands
 
-All commands accept a global `--json` flag for machine-readable output (default is pretty-printed terminal output). All commands accept `--dir <path>` to specify the project root (default: discovered by walking up from `cwd` looking for `.samaritan/`).
+All commands accept a global `--pretty` flag for human-readable terminal output. All commands accept `--dir <path>` to specify the project root (default: discovered by walking up from `cwd` looking for `.samaritan/`).
 
 ### `samaritan init`
 
@@ -119,9 +119,9 @@ samaritan tag a1b2c3d4 auth null-pointer express
 
 ## Output Format
 
-**Pretty mode (default):** Human-readable formatting with labels and whitespace. Exact format TBD during implementation.
+**JSON mode (default):** Each command prints a single JSON object (or array for search results) to stdout. Errors print a JSON object to stderr with `{ "error": "<message>" }`.
 
-**JSON mode (`--json`):** Each command prints a single JSON object (or array for search results) to stdout. Errors print a JSON object to stderr with `{ "error": "<message>" }`.
+**Pretty mode (`--pretty`):** Human-readable formatting with labels and whitespace. Exact format TBD during implementation.
 
 ## CLI Architecture
 
@@ -135,8 +135,7 @@ No other runtime dependencies.
 ### Internal Structure
 
 ```
-src/
-  cli.ts          # commander setup, --json/--dir global flags
+  cli.ts          # commander setup, --pretty/--dir global flags
   store.ts        # JSONL I/O, FTS5 lifecycle, staleness detection
   commands/
     init.ts
@@ -163,8 +162,9 @@ For commands that need a project directory (`add`, `search`, `show`, `tag`), sam
 
 ## Testing
 
-- **Unit tests:** Store operations — JSONL read/write round-trips, FTS5 rebuild, staleness detection, merge-conflict line skipping.
-- **CLI snapshot tests:** Command invocations against a temp `.samaritan/` directory, verifying both pretty and JSON output.
+- **Unit tests:** Store operations — JSONL read/write round-trips, FTS5 rebuild, staleness detection, merge-conflict auto-resolution.
+- **CLI snapshot tests:** Command invocations against a temp `.samaritan/` directory, verifying both JSON and pretty output.
+
 - Test runner: `vitest` or `bun test`.
 
 ## Companion Skill

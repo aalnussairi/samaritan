@@ -1,5 +1,12 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import { join } from "node:path";
 import Database from "better-sqlite3";
 import { resolveConflicts } from "./merge.js";
 import type { Issue, SearchResult } from "./types.js";
@@ -20,9 +27,9 @@ export class Store {
   private readonly dbPath: string;
 
   constructor(projectRoot: string) {
-    this.dir = path.join(projectRoot, SAMARITAN_DIR);
-    this.jsonlPath = path.join(this.dir, JSONL_FILE);
-    this.dbPath = path.join(this.dir, DB_FILE);
+    this.dir = join(projectRoot, SAMARITAN_DIR);
+    this.jsonlPath = join(this.dir, JSONL_FILE);
+    this.dbPath = join(this.dir, DB_FILE);
     this.ensureDir();
     this.db = new Database(this.dbPath);
     this.ensureSchema();
@@ -31,15 +38,15 @@ export class Store {
   }
 
   private ensureDir(): void {
-    if (!fs.existsSync(this.dir)) {
-      fs.mkdirSync(this.dir, { recursive: true });
+    if (!existsSync(this.dir)) {
+      mkdirSync(this.dir, { recursive: true });
     }
-    if (!fs.existsSync(this.jsonlPath)) {
-      fs.writeFileSync(this.jsonlPath, "", "utf-8");
+    if (!existsSync(this.jsonlPath)) {
+      writeFileSync(this.jsonlPath, "", "utf-8");
     }
-    const gitignorePath = path.join(this.dir, ".gitignore");
-    if (!fs.existsSync(gitignorePath)) {
-      fs.writeFileSync(gitignorePath, "issues.db\n", "utf-8");
+    const gitignorePath = join(this.dir, ".gitignore");
+    if (!existsSync(gitignorePath)) {
+      writeFileSync(gitignorePath, "issues.db\n", "utf-8");
     }
   }
 
@@ -62,7 +69,7 @@ export class Store {
   }
 
   private checkStaleness(): void {
-    const stat = fs.statSync(this.jsonlPath);
+    const stat = statSync(this.jsonlPath);
     const fingerprint = `${stat.mtimeMs}:${stat.size}`;
     const row = this.db
       .prepare("SELECT value FROM meta WHERE key = ?")
@@ -99,15 +106,15 @@ export class Store {
   }
 
   private resolveMergeConflicts(): void {
-    const raw = fs.readFileSync(this.jsonlPath, "utf-8");
+    const raw = readFileSync(this.jsonlPath, "utf-8");
     const resolved = resolveConflicts(raw);
     if (resolved !== raw) {
-      fs.writeFileSync(this.jsonlPath, resolved, "utf-8");
+      writeFileSync(this.jsonlPath, resolved, "utf-8");
     }
   }
 
   readAll(): Issue[] {
-    const content = fs.readFileSync(this.jsonlPath, "utf-8");
+    const content = readFileSync(this.jsonlPath, "utf-8");
     const lines = content.split("\n").filter((line) => line.trim() !== "");
     return lines
       .map((line) => {
@@ -123,10 +130,10 @@ export class Store {
 
   append(issue: Issue): void {
     const line = `${JSON.stringify(issue)}\n`;
-    fs.appendFileSync(this.jsonlPath, line, "utf-8");
+    appendFileSync(this.jsonlPath, line, "utf-8");
     this.insertFts(issue);
     // Update fingerprint so stale check doesn't trigger rebuild
-    const stat = fs.statSync(this.jsonlPath);
+    const stat = statSync(this.jsonlPath);
     this.db
       .prepare("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)")
       .run("jsonl_fingerprint", `${stat.mtimeMs}:${stat.size}`);
@@ -141,7 +148,7 @@ export class Store {
     Object.assign(issues[index], fields);
     this.writeAll(issues);
     this.rebuildFromJsonl();
-    const stat = fs.statSync(this.jsonlPath);
+    const stat = statSync(this.jsonlPath);
     this.db
       .prepare("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)")
       .run("jsonl_fingerprint", `${stat.mtimeMs}:${stat.size}`);
@@ -231,7 +238,7 @@ export class Store {
 
   private writeAll(issues: Issue[]): void {
     const lines = `${issues.map((i) => JSON.stringify(i)).join("\n")}\n`;
-    fs.writeFileSync(this.jsonlPath, lines, "utf-8");
+    writeFileSync(this.jsonlPath, lines, "utf-8");
   }
 
   private insertFts(issue: Issue): void {

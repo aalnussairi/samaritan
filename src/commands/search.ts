@@ -35,9 +35,10 @@ export function searchCommand(program: Command): void {
 
         process.stdout.write(JSON.stringify(results));
         process.exit(0);
-      } catch (e: any) {
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
         process.stderr.write(
-          JSON.stringify({ error: e.message } satisfies ErrorOutput)
+          JSON.stringify({ error: message } satisfies ErrorOutput)
         );
         process.exit(1);
       }

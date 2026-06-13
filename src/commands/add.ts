@@ -1,4 +1,4 @@
-import * as crypto from "node:crypto";
+import { randomBytes } from "node:crypto";
 import type { Command } from "commander";
 import { resolveProjectDir } from "../resolve.js";
 import { Store } from "../store.js";
@@ -31,7 +31,7 @@ export function addCommand(program: Command): void {
 
           const store = new Store(projectDir);
 
-          const id = crypto.randomBytes(4).toString("hex");
+          const id = randomBytes(4).toString("hex");
           const tags = options.tags
             ? options.tags
                 .split(",")
@@ -52,9 +52,10 @@ export function addCommand(program: Command): void {
 
           process.stdout.write(JSON.stringify(issue));
           process.exit(0);
-        } catch (e: any) {
+        } catch (e: unknown) {
+          const message = e instanceof Error ? e.message : String(e);
           process.stderr.write(
-            JSON.stringify({ error: e.message } satisfies ErrorOutput)
+            JSON.stringify({ error: message } satisfies ErrorOutput)
           );
           process.exit(1);
         }

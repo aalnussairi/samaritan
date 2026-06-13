@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { Issue, SearchResult } from './types.js';
+import { resolveConflicts } from './merge.js';
 
 const SAMARITAN_DIR = '.samaritan';
 const JSONL_FILE = 'issues.jsonl';
@@ -25,6 +26,7 @@ export class Store {
     this.ensureDir();
     this.db = new Database(this.dbPath);
     this.ensureSchema();
+    this.resolveMergeConflicts();
     this.checkStaleness();
   }
 
@@ -83,6 +85,14 @@ export class Store {
       }
     });
     rebuild(issues);
+  }
+
+  private resolveMergeConflicts(): void {
+    const raw = fs.readFileSync(this.jsonlPath, 'utf-8');
+    const resolved = resolveConflicts(raw);
+    if (resolved !== raw) {
+      fs.writeFileSync(this.jsonlPath, resolved, 'utf-8');
+    }
   }
 
   readAll(): Issue[] {

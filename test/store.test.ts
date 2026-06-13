@@ -214,4 +214,34 @@ describe('Store', () => {
     expect(Array.isArray(results)).toBe(true);
     store.close();
   });
+
+  it('auto-resolves merge conflicts on open', () => {
+    const jsonlPath = path.join(tmpDir, '.samaritan', 'issues.jsonl');
+    // Write a file with conflict markers
+    const conflicted = `{"id":"a","title":"Pre-existing"}
+<<<<<<< HEAD
+{"id":"x","title":"Ours"}
+=======
+{"id":"y","title":"Theirs"}
+>>>>>>> other
+`;
+    fs.mkdirSync(path.dirname(jsonlPath), { recursive: true });
+    fs.writeFileSync(jsonlPath, conflicted, 'utf-8');
+
+    const store = new Store(tmpDir);
+    const issues = store.readAll();
+    // Both sides accepted, conflict markers gone
+    expect(issues).toHaveLength(3);
+    const titles = issues.map(i => i.title);
+    expect(titles).toContain('Ours');
+    expect(titles).toContain('Theirs');
+    expect(titles).toContain('Pre-existing');
+
+    // Verify file was rewritten without conflict markers
+    const rewritten = fs.readFileSync(jsonlPath, 'utf-8');
+    expect(rewritten).not.toContain('<<<<<<<');
+    expect(rewritten).not.toContain('=======');
+    expect(rewritten).not.toContain('>>>>>>>');
+    store.close();
+  });
 });

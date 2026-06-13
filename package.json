@@ -1,0 +1,25 @@
+{
+  "name": "samaritan",
+  "version": "0.1.0",
+  "description": "Bug memory CLI for agents — store and search issue resolutions with FTS5",
+  "type": "module",
+  "bin": {
+    "samaritan": "./bin/samaritan"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.0.0",
+    "commander": "^12.0.0",
+    "@clack/prompts": "^0.7.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  }
+}

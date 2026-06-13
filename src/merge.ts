@@ -1,5 +1,5 @@
 const CONFLICT_START = /^<{7} /;
-const CONFLICT_SEP = /^={7}$/;
+const CONFLICT_SEP = /^={7}\s*$/;
 const CONFLICT_END = /^>{7} /;
 
 /**

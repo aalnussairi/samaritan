@@ -6,6 +6,10 @@
   "bin": {
     "samaritan": "./bin/samaritan"
   },
+  "files": [
+    "dist",
+    "bin"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "vitest run",

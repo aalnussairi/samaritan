@@ -1,7 +1,7 @@
-import * as fs from 'node:fs';
-import * as path from 'node:path';
+import { existsSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 
-const SAMARITAN_DIR = '.samaritan';
+const SAMARITAN_DIR = ".samaritan";
 
 /**
  * Walk up from startDir until a .samaritan directory is found.
@@ -9,13 +9,15 @@ const SAMARITAN_DIR = '.samaritan';
  * Returns null if not found.
  */
 export function findProjectDir(startDir: string): string | null {
-  let current = path.resolve(startDir);
+  let current = resolve(startDir);
   while (true) {
-    if (fs.existsSync(path.join(current, SAMARITAN_DIR))) {
+    if (existsSync(join(current, SAMARITAN_DIR))) {
       return current;
     }
-    const parent = path.dirname(current);
-    if (parent === current) return null;
+    const parent = dirname(current);
+    if (parent === current) {
+      return null;
+    }
     current = parent;
   }
 }
@@ -29,14 +31,20 @@ export function findProjectDir(startDir: string): string | null {
 export function resolveProjectDir(
   flagDir: string | undefined,
   cwd: string,
-  isWrite: boolean,
+  isWrite: boolean
 ): string | null {
-  if (flagDir) return path.resolve(flagDir);
+  if (flagDir) {
+    return resolve(flagDir);
+  }
 
   const found = findProjectDir(cwd);
-  if (found) return found;
+  if (found) {
+    return found;
+  }
 
-  if (isWrite) return cwd;
+  if (isWrite) {
+    return cwd;
+  }
 
   return null;
 }

@@ -1,17 +1,17 @@
 export interface Issue {
-  id: string;
-  title: string;
+  created: string;
   description: string;
+  id: string;
   resolution: string;
   tags: string[];
-  created: string;
+  title: string;
 }
 
 export interface SearchResult {
   id: string;
-  title: string;
-  tags: string[];
   snippet: string;
+  tags: string[];
+  title: string;
 }
 
 export interface ErrorOutput {

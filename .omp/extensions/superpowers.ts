@@ -24,11 +24,17 @@ export default function superpowersExtension(pi: ExtensionAPI) {
   });
 
   pi.on("context", async (event) => {
-    if (!injectBootstrap) return;
-    if (event.messages.some(messageContainsBootstrap)) return;
+    if (!injectBootstrap) {
+      return;
+    }
+    if (event.messages.some(messageContainsBootstrap)) {
+      return;
+    }
 
     const bootstrap = await getBootstrapContent();
-    if (!bootstrap) return;
+    if (!bootstrap) {
+      return;
+    }
 
     const bootstrapMessage = {
       role: "user" as const,
@@ -48,7 +54,9 @@ export default function superpowersExtension(pi: ExtensionAPI) {
 }
 
 async function getBootstrapContent(): Promise<string | null> {
-  if (cachedBootstrap !== undefined) return cachedBootstrap;
+  if (cachedBootstrap !== undefined) {
+    return cachedBootstrap;
+  }
 
   try {
     const file = Bun.file(bootstrapSkillPath);
@@ -137,22 +145,28 @@ Oh My Pi ships \`todo\` as its task-tracking tool with phased lists and operatio
 
 function messageContainsBootstrap(message: unknown): boolean {
   const content = (message as { content?: unknown }).content;
-  if (typeof content === "string") return content.includes(BOOTSTRAP_MARKER);
-  if (!Array.isArray(content)) return false;
-  return content.some((part) => {
-    return (
+  if (typeof content === "string") {
+    return content.includes(BOOTSTRAP_MARKER);
+  }
+  if (!Array.isArray(content)) {
+    return false;
+  }
+  return content.some(
+    (part) =>
       part &&
       typeof part === "object" &&
       (part as { type?: unknown }).type === "text" &&
       typeof (part as { text?: unknown }).text === "string" &&
       (part as { text: string }).text.includes(BOOTSTRAP_MARKER)
-    );
-  });
+  );
 }
 
 function firstNonCompactionSummaryIndex(messages: unknown[]): number {
   let index = 0;
-  while ((messages[index] as { role?: unknown } | undefined)?.role === "compactionSummary") {
+  while (
+    (messages[index] as { role?: unknown } | undefined)?.role ===
+    "compactionSummary"
+  ) {
     index += 1;
   }
   return index;

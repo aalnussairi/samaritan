@@ -4,5 +4,5 @@
  */
 
 export function helperFunction(): string {
-  return 'Helper function result';
+  return "Helper function result";
 }

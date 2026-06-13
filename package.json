@@ -1,9 +1,33 @@
 {
+  "dependencies": {
+    "@clack/prompts": "^0.7.0",
+    "better-sqlite3": "^11.0.0",
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.16",
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^20.0.0",
+    "lefthook": "^2.1.9",
+    "lint-staged": "^17.0.7",
+    "typescript": "^5.4.0",
+    "ultracite": "^7.8.3",
+    "vitest": "^1.6.0"
+  },
   "name": "samaritan",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build && npm test",
+    "check": "ultracite check",
+    "fix": "ultracite fix",
+    "prepare": "lefthook install"
+  },
+  "type": "module",
   "version": "0.0.1",
   "description": "Bug memory CLI for agents — store and search issue resolutions with FTS5",
   "license": "MIT",
-  "type": "module",
   "bin": {
     "samaritan": "./bin/samaritan"
   },
@@ -11,23 +35,6 @@
     "dist",
     "bin"
   ],
-  "scripts": {
-    "build": "tsc",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "prepublishOnly": "npm run build && npm test"
-  },
-  "dependencies": {
-    "better-sqlite3": "^11.0.0",
-    "commander": "^12.0.0",
-    "@clack/prompts": "^0.7.0"
-  },
-  "devDependencies": {
-    "@types/better-sqlite3": "^7.6.0",
-    "@types/node": "^20.0.0",
-    "typescript": "^5.4.0",
-    "vitest": "^1.6.0"
-  },
   "engines": {
     "node": ">=18"
   },

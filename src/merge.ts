@@ -8,7 +8,7 @@ const CONFLICT_END = /^>{7} /;
  * lines are discarded. Lines outside conflict blocks pass through unchanged.
  */
 export function resolveConflicts(content: string): string {
-  const lines = content.split('\n');
+  const lines = content.split("\n");
   const result: string[] = [];
   let i = 0;
 
@@ -21,18 +21,22 @@ export function resolveConflicts(content: string): string {
     }
   }
 
-  return result.join('\n');
+  return result.join("\n");
 }
 
-function resolveBlock(lines: string[], start: number, result: string[]): number {
+function resolveBlock(
+  lines: string[],
+  start: number,
+  result: string[]
+): number {
   let i = start + 1; // skip <<<<<<< marker
   const ours: string[] = [];
   const theirs: string[] = [];
-  let side: 'ours' | 'theirs' = 'ours';
+  let side: "ours" | "theirs" = "ours";
 
   while (i < lines.length) {
     if (CONFLICT_SEP.test(lines[i])) {
-      side = 'theirs';
+      side = "theirs";
       i++;
       continue;
     }
@@ -42,10 +46,10 @@ function resolveBlock(lines: string[], start: number, result: string[]): number 
     }
 
     const trimmed = lines[i].trim();
-    if (trimmed !== '') {
+    if (trimmed !== "") {
       try {
         JSON.parse(trimmed);
-        if (side === 'ours') {
+        if (side === "ours") {
           ours.push(trimmed);
         } else {
           theirs.push(trimmed);

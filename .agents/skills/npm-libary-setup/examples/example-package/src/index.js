@@ -3,11 +3,11 @@
  */
 
 // Import from another module
-import { helperFunction } from './helpers.js';
+import { helperFunction } from "./helpers.js";
 
 // Named export
 export function greet(name) {
-  return 'Hello, ' + name + '!';
+  return `Hello, ${name}!`;
 }
 
 // Default export

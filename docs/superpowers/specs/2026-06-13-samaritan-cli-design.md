@@ -86,7 +86,16 @@ Accept `--dir <path>` to target a different project root. Without it, uses the c
 
 **Interactive flow:**
 
-1. **Welcome** — tool name, version, one-line description ("Record and search bug memories for your project")
+1. **Welcome** — the "cybermedium" ASCII art banner followed by the version number and one-line description ("Record and search bug memories for your project")
+
+  The banner must be exactly:
+
+  ```
+  ____ ____ _  _ ____ ____ _ ___ ____ _  _ 
+  [__  |__| |\/| |__| |__/ |  |  |__| |\ | 
+  ___] |  | |  | |  | |  \ |  |  |  | | \| 
+                                             
+  
 2. **Prompt** — "Initialize samaritan in `<path>`?" → default Yes (enter to confirm, n to cancel)
 3. **Progress** — spinner creating each artifact: `.samaritan/`, `issues.jsonl`, `issues.db`, `.gitignore`
 4. **Success** — green checkmark, path summary, next-steps hint: "Use `samaritan add` to record your first bug"

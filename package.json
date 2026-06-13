@@ -1,7 +1,8 @@
 {
   "name": "samaritan",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Bug memory CLI for agents — store and search issue resolutions with FTS5",
+  "license": "MIT",
   "type": "module",
   "bin": {
     "samaritan": "./bin/samaritan"
@@ -13,7 +14,8 @@
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build && npm test"
   },
   "dependencies": {
     "better-sqlite3": "^11.0.0",
@@ -25,5 +27,20 @@
     "@types/node": "^20.0.0",
     "typescript": "^5.4.0",
     "vitest": "^1.6.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "cli",
+    "agent",
+    "bug-tracker",
+    "memory",
+    "fts5",
+    "sqlite"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aalnussairi/samaritan.git"
   }
 }

@@ -63,13 +63,37 @@ JSONL is line-per-issue, so independent additions merge cleanly in git. Conflict
 - After resolving, samaritan rewrites `issues.jsonl` with the merged result and rebuilds the FTS5 index.
 - This means samaritan never requires manual conflict resolution — agents can run any command after a merge and the store will be consistent.
 
-## Commands
 
-All commands accept a global `--pretty` flag for human-readable terminal output. All commands accept `--dir <path>` to specify the project root (default: discovered by walking up from `cwd` looking for `.samaritan/`).
+## Design Principle: Two Audiences
+
+`samaritan` has two audiences with opposing needs — the design treats them as separate concerns:
+
+| | `init` | All other commands |
+|---|---|---|
+| **Audience** | Human developer | Agent (code) |
+| **Goal** | Delight, guide, confirm | Minimal, deterministic, parseable |
+| **Interaction** | Interactive wizard | Flag → JSON → exit |
+| **Output** | Rich terminal UI | Machine-readable JSON |
+| **Errors** | Friendly styled messages | Structured JSON on stderr |
+
+There is no `--json` or `--pretty` flag. The audience is baked into which command runs.
 
 ### `samaritan init`
 
-Creates the `.samaritan/` directory, an empty `issues.jsonl`, an empty `issues.db`, and a `.gitignore` containing `issues.db`. Idempotent — safe to run when already initialized.
+The single human touchpoint. Not a flag wielding command — a guided experience.
+
+Accept `--dir <path>` to target a different project root. Without it, uses the current working directory.
+
+**Interactive flow:**
+
+1. **Welcome** — tool name, version, one-line description ("Record and search bug memories for your project")
+2. **Prompt** — "Initialize samaritan in `<path>`?" → default Yes (enter to confirm, n to cancel)
+3. **Progress** — spinner creating each artifact: `.samaritan/`, `issues.jsonl`, `issues.db`, `.gitignore`
+4. **Success** — green checkmark, path summary, next-steps hint: "Use `samaritan add` to record your first bug"
+
+If the directory is already initialized, show "Already initialized" with the path and exit 0 — no re-prompt, no re-creation.
+
+**Implementation:** Use a lightweight interactive prompt library (e.g. `@clack/prompts`). The init command is the only place this dependency is imported.
 
 ### `samaritan add <title> <description>`
 
@@ -79,32 +103,56 @@ samaritan add "Null pointer in auth" "Happens when session token expires"
   --resolution "Added null check"
 ```
 
-- Generates an 8-char hex `id`.
-- Sets `created` to current UTC timestamp.
+- Generates an 8-char hex `id`, sets `created` to current UTC timestamp.
 - Appends the record as a single JSON line to `issues.jsonl`.
-- Rebuilds the FTS5 index incrementally (appends the new issue's text).
-- Prints the created record.
-- `--tags` is optional (comma-separated). `--resolution` is optional.
+- Appends to the FTS5 index (single-row insert, not full rebuild).
+- Prints the full created record as JSON to stdout.
+- `--tags` optional (comma-separated). `--resolution` optional.
 - Auto-creates `.samaritan/` if absent (implicit init).
+
+**Output (stdout):**
+
+```json
+{"id":"a1b2c3d4","title":"Null pointer in auth","description":"Happens when session token expires","resolution":"Added null check","tags":["auth","null-pointer","express"],"created":"2026-06-13T10:30:00Z"}
+```
 
 ### `samaritan search <query>`
 
 ```
-samaritan search "null pointer"
-  --tag auth
-  --limit 10
+samaritan search "null pointer" --tag auth --limit 5
 ```
 
-- Runs an FTS5 match query. Phrase matching is the default behavior; boolean syntax (`AND`, `OR`, `NOT`, parenthesized groups) is supported.
-- Results are ranked by BM25 relevance, highest first.
-- Default limit is 10. Overridable with `--limit`.
-- `--tag` is optional. When provided, results are AND-filtered: must match both the full-text query AND the exact tag.
-- An empty query with `--tag` returns the most recent issues matching that tag (top-N by creation date, limited by `--limit`).
-- Output is a condensed view per result: id, title, tags, and an FTS5 snippet with matched terms highlighted.
+- Runs FTS5 match query. Phrase matching default; boolean syntax (`AND`, `OR`, `NOT`, parenthesized groups) supported.
+- Results ranked by BM25 relevance, highest first.
+- Default limit 10, overridable via `--limit`.
+- `--tag` optional. When provided, AND-filtered: must match full-text query AND exact tag.
+- Empty query with `--tag` returns top-N most recent issues matching the tag (by creation date).
+
+**Output (stdout):** JSON array of condensed results. Empty array when nothing found.
+
+```json
+[{"id":"a1b2c3d4","title":"Null pointer in auth middleware","tags":["auth","null-pointer"],"snippet":"...Null pointer in <b>auth</b> middleware..."}]
+```
+
+Each result: `id`, `title`, `tags`, `snippet` (FTS5 snippet with `<b>` highlight markers).
 
 ### `samaritan show <id>`
 
-Prints the full record for a single issue by id. All fields: id, title, description, resolution, tags, created. Exits non-zero if the id is not found.
+```
+samaritan show a1b2c3d4
+```
+
+**Output (stdout):** Full record as JSON.
+
+```json
+{"id":"a1b2c3d4","title":"Null pointer in auth","description":"Happens when session token expires","resolution":"Added null check","tags":["auth","null-pointer","express"],"created":"2026-06-13T10:30:00Z"}
+```
+
+**Error (stderr, exit 1):**
+
+```json
+{"error":"issue not found: deadbeef"}
+```
 
 ### `samaritan tag <id> <tags...>`
 
@@ -113,15 +161,32 @@ samaritan tag a1b2c3d4 auth null-pointer express
 ```
 
 - Sets (replaces) tags on the identified issue.
-- Modifies the line in `issues.jsonl` and triggers a full FTS5 rebuild.
-- Prints the updated record.
-- Exits non-zero if the id is not found.
+- Modifies the line in `issues.jsonl`.
+- Triggers full FTS5 rebuild (tag-only changes need reindex).
+- Prints the updated record as JSON to stdout.
 
-## Output Format
+**Output (stdout):**
 
-**JSON mode (default):** Each command prints a single JSON object (or array for search results) to stdout. Errors print a JSON object to stderr with `{ "error": "<message>" }`.
+```json
+{"id":"a1b2c3d4","tags":["auth","null-pointer","express"]}
+```
 
-**Pretty mode (`--pretty`):** Human-readable formatting with labels and whitespace. Exact format TBD during implementation.
+**Error (stderr, exit 1):**
+
+```json
+{"error":"issue not found: deadbeef"}
+```
+
+## Error Contract (Agent-Facing Commands)
+
+Every agent-facing command (`add`, `search`, `show`, `tag`) follows the same error protocol:
+
+- Non-zero exit code (1 for not found, 2 for invalid input, etc.)
+- JSON error object on stderr: `{"error":"<message>"}`
+- Stdout empty on error
+- Agents check exit code first, parse stderr for details
+
+`init` errors use friendly terminal output instead — a human is reading.
 
 ## CLI Architecture
 
@@ -129,13 +194,14 @@ samaritan tag a1b2c3d4 auth null-pointer express
 
 - `better-sqlite3` — synchronous SQLite with FTS5 support
 - `commander` — CLI argument parsing
+- `@clack/prompts` — interactive prompts for `init` command only
 
 No other runtime dependencies.
 
 ### Internal Structure
 
 ```
-  cli.ts          # commander setup, --pretty/--dir global flags
+  cli.ts          # commander setup, --dir global flag
   store.ts        # JSONL I/O, FTS5 lifecycle, staleness detection
   commands/
     init.ts
@@ -163,9 +229,9 @@ For commands that need a project directory (`add`, `search`, `show`, `tag`), sam
 ## Testing
 
 - **Unit tests:** Store operations — JSONL read/write round-trips, FTS5 rebuild, staleness detection, merge-conflict auto-resolution.
-- **CLI snapshot tests:** Command invocations against a temp `.samaritan/` directory, verifying both JSON and pretty output.
+- **CLI snapshot tests:** Command invocations against a temp `.samaritan/` directory, verifying JSON output (stdout) and error output (stderr).
+- **Test runner:** `vitest` or `bun test`.
 
-- Test runner: `vitest` or `bun test`.
 
 ## Companion Skill
 

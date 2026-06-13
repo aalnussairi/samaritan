@@ -180,4 +180,38 @@ describe('Store', () => {
     expect(results[0].id).toBe('id2');
     store2.close();
   });
+
+  it('search returns empty array when nothing matches', () => {
+    const store = new Store(tmpDir);
+    store.append({
+      id: 'id1',
+      title: 'Something',
+      description: 'Some desc',
+      resolution: 'Done',
+      tags: ['test'],
+      created: '2026-06-13T10:00:00Z',
+    });
+
+    const results = store.search('nonexistent');
+    expect(results).toEqual([]);
+    store.close();
+  });
+
+  it('search handles FTS5 special characters gracefully', () => {
+    const store = new Store(tmpDir);
+    store.append({
+      id: 'id1',
+      title: 'Test issue',
+      description: 'Some content',
+      resolution: 'Fixed',
+      tags: ['test'],
+      created: '2026-06-13T10:00:00Z',
+    });
+
+    // FTS5 query with special characters should not crash
+    const results = store.search('test OR *');
+    // May return results or empty, but must not throw
+    expect(Array.isArray(results)).toBe(true);
+    store.close();
+  });
 });

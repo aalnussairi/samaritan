@@ -151,19 +151,24 @@ export class Store {
       params = [query, limit];
     }
 
-    const rows = this.db.prepare(sql).all(...params) as Array<{
-      id: string;
-      title: string;
-      tags: string;
-      snippet: string;
-    }>;
+    try {
+      const rows = this.db.prepare(sql).all(...params) as Array<{
+        id: string;
+        title: string;
+        tags: string;
+        snippet: string;
+      }>;
 
-    return rows.map(row => ({
-      id: row.id,
-      title: row.title,
-      tags: JSON.parse(row.tags) as string[],
-      snippet: row.snippet,
-    }));
+      return rows.map(row => ({
+        id: row.id,
+        title: row.title,
+        tags: JSON.parse(row.tags) as string[],
+        snippet: row.snippet,
+      }));
+    } catch {
+      // FTS5 syntax error (malformed query) — return empty
+      return [];
+    }
   }
 
   private searchByTagOnly(tag: string | undefined, limit: number): SearchResult[] {

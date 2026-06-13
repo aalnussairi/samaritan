@@ -781,11 +781,8 @@ describe('resolveConflicts', () => {
 
   it('accepts both sides of a conflict and discards markers', () => {
     const content = `{"id":"a","title":"Original"}
-<<<<<<< HEAD
 {"id":"a","title":"Ours"}
-=======
 {"id":"a","title":"Theirs"}
->>>>>>> other-branch
 {"id":"b","title":"Unrelated"}
 `;
     const result = resolveConflicts(content);
@@ -802,11 +799,8 @@ describe('resolveConflicts', () => {
 =======
 {"id":"a","title":"Theirs A"}
 >>>>>>> branch
-<<<<<<< HEAD
 {"id":"b","title":"Ours B"}
-=======
 {"id":"b","title":"Theirs B"}
->>>>>>> branch
 `;
     const result = resolveConflicts(content);
     const lines = result.split('\n').filter(l => l.trim() !== '');
@@ -946,11 +940,8 @@ Append to `test/store.test.ts`:
     const jsonlPath = path.join(tmpDir, '.samaritan', 'issues.jsonl');
     // Write a file with conflict markers
     const conflicted = `{"id":"a","title":"Pre-existing"}
-<<<<<<< HEAD
 {"id":"x","title":"Ours"}
-=======
 {"id":"y","title":"Theirs"}
->>>>>>> other
 `;
     fs.mkdirSync(path.dirname(jsonlPath), { recursive: true });
     fs.writeFileSync(jsonlPath, conflicted, 'utf-8');

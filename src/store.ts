@@ -91,17 +91,17 @@ export class Store {
   }
 
   private rebuildFts(issues: Issue[]): void {
-    this.db.exec('DELETE FROM issues_fts');
     const stmt = this.db.prepare(`
       INSERT INTO issues_fts (id, title, description, resolution, tags, created)
       VALUES (?, ?, ?, ?, ?, ?)
     `);
-    const insertMany = this.db.transaction((items: Issue[]) => {
+    const rebuild = this.db.transaction((items: Issue[]) => {
+      this.db.exec('DELETE FROM issues_fts');
       for (const issue of items) {
         stmt.run(issue.id, issue.title, issue.description, issue.resolution, JSON.stringify(issue.tags), issue.created);
       }
     });
-    insertMany(issues);
+    rebuild(issues);
   }
 
   close(): void {
